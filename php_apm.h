@@ -1,5 +1,15 @@
+#include <stdio.h>
+#include <string.h>
+#include <time.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+
+
 #define PHP_APM_VERSION "0.1"
 #define PHP_APM_EXTNAME "apm"
+#define BUF_SIZE 1024
 
 extern zend_module_entry apm_module_entry;
 #define phpext_apm_ptr &apm_module_entry
@@ -22,7 +32,6 @@ ZEND_BEGIN_MODULE_GLOBALS(apm)
 	unsigned int server_port;
 	time_t start_time;
 	time_t end_time;
-	FILE *fh; //tobe udp
 ZEND_END_MODULE_GLOBALS(apm)
 	
 //ZEND_DECLARE_MODULE_GLOBALS(apm)

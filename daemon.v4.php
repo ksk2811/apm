@@ -50,7 +50,7 @@ EOT;
 		}
 
 		if (isset($options['s'])) { //stop
-			if (function_exists('posix_kill'))
+			if (function_exists('posix_kill')) {
 				if (file_exists($this->pid_file)) {
 					    $pid = file_get_contents($this->pid_file);
 					    posix_kill($pid, 9);
