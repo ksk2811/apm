@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
+#include <sys/timeb.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -31,7 +32,8 @@ ZEND_BEGIN_MODULE_GLOBALS(apm)
 	char *server_host;
 	unsigned int server_port;
 	time_t start_time;
-	time_t end_time;
+	long long start_time_ms;
+	long long end_time_ms;
 ZEND_END_MODULE_GLOBALS(apm)
 	
 //ZEND_DECLARE_MODULE_GLOBALS(apm)
@@ -42,7 +44,6 @@ ZEND_EXTERN_MODULE_GLOBALS(apm)
 #else
 #define APM_G(v) (apm_globals.v)
 #endif
-	
 
 PHP_MINIT_FUNCTION(apm);
 PHP_MSHUTDOWN_FUNCTION(apm);
@@ -51,3 +52,5 @@ PHP_RSHUTDOWN_FUNCTION(apm);
 PHP_MINFO_FUNCTION(apm);
 
 //PHP_FUNCTION(apm_func);
+void send_data(char *msg);
+long long current_timestamp();

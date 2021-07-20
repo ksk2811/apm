@@ -5,11 +5,8 @@
 #include "php_ini.h"
 #include "php_apm.h"
 
-//#include <send.h> //별도의 파일로 빼야한다
-
 ZEND_DECLARE_MODULE_GLOBALS(apm);
 //ZEND_EXTERN_MODULE_GLOBALS(apm);
-
 
 /*
  현재는 필요없다.
@@ -81,20 +78,34 @@ PHP_MSHUTDOWN_FUNCTION(apm)
 
 PHP_RINIT_FUNCTION(apm)
 {
-	//php_printf("start: global val start time(%11d), enabled(%d), server host(%s), server port(%d)\n", APM_G(start_time), APM_G(enabled), APM_G(server_host), APM_G(server_port));
+	//check_time
 	APM_G(start_time) = time(NULL);
+
+	struct timeval s_time; 
+	gettimeofday(&s_time, NULL);
+	APM_G(start_time_ms) = s_time.tv_sec*1000LL + s_time.tv_usec/1000;
+	//APM_G(start_time) = current_timestamp();
 }
 
 PHP_RSHUTDOWN_FUNCTION(apm)
 {
-	//php_printf("finish: global val finsh time(%11d), enabled(%d), server host(%s), server port(%d)\n", APM_G(end_time), APM_G(enabled), APM_G(server_host), APM_G(server_port));
-	APM_G(end_time) = time(NULL);
+	//check_time
+	struct timeval e_time; 
+	gettimeofday(&e_time, NULL);
+	APM_G(end_time_ms) = e_time.tv_sec*1000LL + e_time.tv_usec/1000;
+	//APM_G(end_time) = current_timestamp();
 
-	//udp start
+	//send_data
+	char msg[BUF_SIZE];
+	snprintf(msg, BUF_SIZE, "%d, %lld\n", APM_G(start_time), APM_G(end_time_ms) - APM_G(start_time_ms)); //format: start_time, end_time, ....
+	send_data(msg);
+}
+
+void send_data(char *msg)
+{
 	int client_socket;
 	struct sockaddr_in serverAddress;
 	int server_addr_size;
-	char msg[BUF_SIZE];
 
 	memset(&serverAddress, 0, sizeof(serverAddress));
 	serverAddress.sin_family = AF_INET;
@@ -103,9 +114,17 @@ PHP_RSHUTDOWN_FUNCTION(apm)
 	client_socket = socket(PF_INET, SOCK_DGRAM, 0);
 	server_addr_size = sizeof(serverAddress);
 	
-	//start_time, end_time, ....
-	snprintf(msg, BUF_SIZE, "%d, %d\n", APM_G(start_time), APM_G(end_time));
+	//format: start_time, end_time, ....
 	sendto(client_socket, msg, strlen(msg), 0, (struct sockaddr*)&serverAddress, sizeof(serverAddress));
 	close(client_socket);
-	//udp finish
 }
+
+/* make error
+long long current_timestamp() {
+    struct timeval te; 
+    gettimeofday(&te, NULL); // get current time
+    long long milliseconds = te.tv_sec*1000LL + te.tv_usec/1000; // calculate milliseconds
+
+    return milliseconds;
+}
+*/
