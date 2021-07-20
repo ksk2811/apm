@@ -79,37 +79,28 @@ PHP_MSHUTDOWN_FUNCTION(apm)
 PHP_RINIT_FUNCTION(apm)
 {
 	//check_time
-	APM_G(start_time) = time(NULL);
-
-	struct timeval s_time; 
-	gettimeofday(&s_time, NULL);
-	APM_G(start_time_ms) = s_time.tv_sec*1000LL + s_time.tv_usec/1000;
-	//APM_G(start_time) = current_timestamp();
+	APM_G(start_time_ms) = current_timestamp();
 }
 
 PHP_RSHUTDOWN_FUNCTION(apm)
 {
 	//check_time
-	struct timeval e_time; 
-	gettimeofday(&e_time, NULL);
-	APM_G(end_time_ms) = e_time.tv_sec*1000LL + e_time.tv_usec/1000;
-	//APM_G(end_time) = current_timestamp();
+	APM_G(end_time_ms) = current_timestamp();
 
-	
 	// 슈퍼 글로벌 변수 확인 코드
-	char *script_name;
-	zval *superglobal;
-	zval *host;
-	zend_string *host_tmp;
-	superglobal = zend_hash_str_find(&EG(symbol_table), ZEND_STRL("_SERVER"));
-	host = zend_hash_str_find(Z_ARRVAL_P(superglobal), ZEND_STRL("HTTP_HOST"));
-	host_tmp = zend_string_init(Z_STRVAL_P(host), Z_STRLEN_P(host), 0);
-	php_printf("This is my string: %s\n", ZSTR_VAL(host_tmp));
+	//char *script_name;
+	//zval *superglobal;
+	//zval *host;
+	//zend_string *host_tmp;
+	//superglobal = zend_hash_str_find(&EG(symbol_table), ZEND_STRL("_SERVER"));
+	//host = zend_hash_str_find(Z_ARRVAL_P(superglobal), ZEND_STRL("HTTP_HOST"));
+	//host_tmp = zend_string_init(Z_STRVAL_P(host), Z_STRLEN_P(host), 0);
+	//php_printf("This is my string: %s\n", ZSTR_VAL(host_tmp));
 	//
 
-
+	//format: unixtimestamp(milliseconds), latency(milliseconds), ..
 	char msg[BUF_SIZE];
-	snprintf(msg, BUF_SIZE, "%d, %lld\n", APM_G(start_time), APM_G(end_time_ms) - APM_G(start_time_ms)); //format: start_time, end_time, ....
+	snprintf(msg, BUF_SIZE, "%lld, %lld\n", APM_G(start_time_ms), APM_G(end_time_ms) - APM_G(start_time_ms)); //format: start_time, end_time, ....
 	send_data(msg);
 }
 
@@ -126,17 +117,15 @@ void send_data(char *msg)
 	client_socket = socket(PF_INET, SOCK_DGRAM, 0);
 	server_addr_size = sizeof(serverAddress);
 	
-	//format: start_time, end_time, ....
 	sendto(client_socket, msg, strlen(msg), 0, (struct sockaddr*)&serverAddress, sizeof(serverAddress));
 	close(client_socket);
 }
 
-/* make error
-long long current_timestamp() {
+time_t current_timestamp()
+{
     struct timeval te; 
-    gettimeofday(&te, NULL); // get current time
-    long long milliseconds = te.tv_sec*1000LL + te.tv_usec/1000; // calculate milliseconds
+    gettimeofday(&te, NULL);
+    time_t milliseconds = (te.tv_sec * 1000) + (te.tv_usec * 1000);
 
     return milliseconds;
 }
-*/

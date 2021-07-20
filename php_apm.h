@@ -31,9 +31,8 @@ ZEND_BEGIN_MODULE_GLOBALS(apm)
 	unsigned int enabled;
 	char *server_host;
 	unsigned int server_port;
-	time_t start_time;
-	long long start_time_ms;
-	long long end_time_ms;
+	time_t start_time_ms;
+	time_t end_time_ms;
 ZEND_END_MODULE_GLOBALS(apm)
 	
 //ZEND_DECLARE_MODULE_GLOBALS(apm)
@@ -53,4 +52,4 @@ PHP_MINFO_FUNCTION(apm);
 
 //PHP_FUNCTION(apm_func);
 void send_data(char *msg);
-long long current_timestamp();
+time_t current_timestamp();
