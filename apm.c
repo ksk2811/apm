@@ -95,7 +95,19 @@ PHP_RSHUTDOWN_FUNCTION(apm)
 	APM_G(end_time_ms) = e_time.tv_sec*1000LL + e_time.tv_usec/1000;
 	//APM_G(end_time) = current_timestamp();
 
-	//send_data
+	
+	// 슈퍼 글로벌 변수 확인 코드
+	char *script_name;
+	zval *superglobal;
+	zval *host;
+	zend_string *host_tmp;
+	superglobal = zend_hash_str_find(&EG(symbol_table), ZEND_STRL("_SERVER"));
+	host = zend_hash_str_find(Z_ARRVAL_P(superglobal), ZEND_STRL("HTTP_HOST"));
+	host_tmp = zend_string_init(Z_STRVAL_P(host), Z_STRLEN_P(host), 0);
+	php_printf("This is my string: %s\n", ZSTR_VAL(host_tmp));
+	//
+
+
 	char msg[BUF_SIZE];
 	snprintf(msg, BUF_SIZE, "%d, %lld\n", APM_G(start_time), APM_G(end_time_ms) - APM_G(start_time_ms)); //format: start_time, end_time, ....
 	send_data(msg);
