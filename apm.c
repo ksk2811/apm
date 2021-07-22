@@ -132,7 +132,7 @@ time_t current_timestamp()
 {
     struct timeval te; 
     gettimeofday(&te, NULL);
-    time_t milliseconds = (te.tv_sec * 1000) + (te.tv_usec * 1000);
+    time_t milliseconds = (te.tv_sec * 1000) + (te.tv_usec / 1000);
 
     return milliseconds;
 }
