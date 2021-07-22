@@ -86,21 +86,28 @@ PHP_RSHUTDOWN_FUNCTION(apm)
 {
 	//check_time
 	APM_G(end_time_ms) = current_timestamp();
-
-	// 슈퍼 글로벌 변수 확인 코드
-	//char *script_name;
-	//zval *superglobal;
-	//zval *host;
-	//zend_string *host_tmp;
-	//superglobal = zend_hash_str_find(&EG(symbol_table), ZEND_STRL("_SERVER"));
-	//host = zend_hash_str_find(Z_ARRVAL_P(superglobal), ZEND_STRL("HTTP_HOST"));
-	//host_tmp = zend_string_init(Z_STRVAL_P(host), Z_STRLEN_P(host), 0);
-	//php_printf("This is my string: %s\n", ZSTR_VAL(host_tmp));
-	//
-
-	//format: unixtimestamp(milliseconds), latency(milliseconds), ..
+	
+	//make data
 	char msg[BUF_SIZE];
-	snprintf(msg, BUF_SIZE, "%lld, %lld\n", APM_G(start_time_ms), APM_G(end_time_ms) - APM_G(start_time_ms)); //format: start_time, end_time, ....
+	char uri[BUF_SIZE];
+	char host[BUF_SIZE];
+	char ip[BUF_SIZE];
+	char method[BUF_SIZE];
+
+	get_super_global(host, BUF_SIZE, "HTTP_HOST");
+	get_super_global(uri, BUF_SIZE, "REQUEST_URI");
+	get_super_global(ip, BUF_SIZE, "REMOTE_ADDR");
+	get_super_global(method, BUF_SIZE, "REQUEST_METHOD");
+	//timestamp(milliseconds), tps(milliseconds), host, ip, method)
+	snprintf(msg, BUF_SIZE, "%lld, %lld, %s%s, %s, %s\n",
+			APM_G(start_time_ms),
+			APM_G(end_time_ms) - APM_G(start_time_ms),
+			host,
+			uri,
+			ip,
+			method);
+
+	//send data
 	send_data(msg);
 }
 
@@ -128,4 +135,25 @@ time_t current_timestamp()
     time_t milliseconds = (te.tv_sec * 1000) + (te.tv_usec * 1000);
 
     return milliseconds;
+}
+
+int get_super_global(char *msg, int len, const char* name)
+{
+	zval *super_global = NULL;
+	zval *data = NULL;
+	zend_string *str_data = NULL;
+	
+	if ((super_global = zend_hash_str_find(&EG(symbol_table), ZEND_STRL("_SERVER"))) == NULL) {
+		return FALSE;
+	}
+
+	if ((data = zend_hash_str_find(Z_ARRVAL_P(super_global), (name), strlen(name))) == NULL) {
+		return FALSE;
+	}
+
+	str_data = zend_string_init(Z_STRVAL_P(data), Z_STRLEN_P(data), 0); //free가 필요한 함수인지 조사
+	snprintf(msg, len, "%s", ZSTR_VAL(str_data));
+
+	return TRUE;
+
 }

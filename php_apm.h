@@ -11,6 +11,8 @@
 #define PHP_APM_VERSION "0.1"
 #define PHP_APM_EXTNAME "apm"
 #define BUF_SIZE 1024
+#define FALSE 0
+#define TRUE 1
 
 extern zend_module_entry apm_module_entry;
 #define phpext_apm_ptr &apm_module_entry
@@ -53,3 +55,4 @@ PHP_MINFO_FUNCTION(apm);
 //PHP_FUNCTION(apm_func);
 void send_data(char *msg);
 time_t current_timestamp();
+int get_super_global(char *msg, int len, const char* name);
