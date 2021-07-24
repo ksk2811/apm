@@ -35,6 +35,12 @@ ZEND_BEGIN_MODULE_GLOBALS(apm)
 	unsigned int server_port;
 	time_t start_time_ms;
 	time_t end_time_ms;
+
+	char msg[BUF_SIZE];
+	char uri[BUF_SIZE];
+	char host[BUF_SIZE];
+	char ip[BUF_SIZE];
+	char method[BUF_SIZE];
 ZEND_END_MODULE_GLOBALS(apm)
 	
 //ZEND_DECLARE_MODULE_GLOBALS(apm)
@@ -54,5 +60,5 @@ PHP_MINFO_FUNCTION(apm);
 
 //PHP_FUNCTION(apm_func);
 void send_data(char *msg);
-time_t current_timestamp();
+time_t get_millisec();
 int get_super_global(char *msg, int len, const char* name);

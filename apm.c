@@ -78,34 +78,32 @@ PHP_MSHUTDOWN_FUNCTION(apm)
 
 PHP_RINIT_FUNCTION(apm)
 {
+	//php_code에서 $_SERVER를 사용안해도 접근할 수 있게 해줌
+	zend_is_auto_global_str(ZEND_STRL("_SERVER")); 
+
 	//check_time
-	APM_G(start_time_ms) = current_timestamp();
+	APM_G(start_time_ms) = get_millisec();
+	
+	//get data
+	get_super_global(APM_G(host), BUF_SIZE, "HTTP_HOST");
+	get_super_global(APM_G(uri), BUF_SIZE, "REQUEST_URI");
+	get_super_global(APM_G(ip), BUF_SIZE, "REMOTE_ADDR");
+	get_super_global(APM_G(method), BUF_SIZE, "REQUEST_METHOD");
 }
 
 PHP_RSHUTDOWN_FUNCTION(apm)
 {
 	//check_time
-	APM_G(end_time_ms) = current_timestamp();
-	
-	//make data
-	char msg[BUF_SIZE];
-	char uri[BUF_SIZE];
-	char host[BUF_SIZE];
-	char ip[BUF_SIZE];
-	char method[BUF_SIZE];
+	APM_G(end_time_ms) = get_millisec();
 
-	get_super_global(host, BUF_SIZE, "HTTP_HOST");
-	get_super_global(uri, BUF_SIZE, "REQUEST_URI");
-	get_super_global(ip, BUF_SIZE, "REMOTE_ADDR");
-	get_super_global(method, BUF_SIZE, "REQUEST_METHOD");
-	//timestamp(milliseconds), tps(milliseconds), host, ip, method)
-	snprintf(msg, BUF_SIZE, "%lld, %lld, %s%s, %s, %s\n",
-			APM_G(start_time_ms),
-			APM_G(end_time_ms) - APM_G(start_time_ms),
-			host,
-			uri,
-			ip,
-			method);
+	char msg[BUF_SIZE];
+	snprintf(msg, BUF_SIZE, "%ld, %ld, %s%s, %s, %s\n",
+		APM_G(start_time_ms),
+		APM_G(end_time_ms) - APM_G(start_time_ms),
+		APM_G(host),
+		APM_G(uri),
+		APM_G(ip),
+		APM_G(method));
 
 	//send data
 	send_data(msg);
@@ -116,19 +114,32 @@ void send_data(char *msg)
 	int client_socket;
 	struct sockaddr_in serverAddress;
 	int server_addr_size;
+	int msg_len = 0;
+	int real_send_msg_len = 0;
+	char log_msg[BUF_SIZE];
+
+	if ((client_socket = socket(PF_INET, SOCK_DGRAM, 0)) == -1) {
+		//php_errors.log 시작할때 warning 로그는 생기는데 이건 안나온다...
+		php_log_err("can't create socket\n");
+		return;
+	}
 
 	memset(&serverAddress, 0, sizeof(serverAddress));
 	serverAddress.sin_family = AF_INET;
 	inet_aton(APM_G(server_host), (struct in_addr*) &serverAddress.sin_addr.s_addr);
 	serverAddress.sin_port = htons(APM_G(server_port));
-	client_socket = socket(PF_INET, SOCK_DGRAM, 0);
 	server_addr_size = sizeof(serverAddress);
-	
-	sendto(client_socket, msg, strlen(msg), 0, (struct sockaddr*)&serverAddress, sizeof(serverAddress));
+
+	msg_len = strlen(msg);
+	real_send_msg_len = sendto(client_socket, msg, msg_len, 0, (struct sockaddr*)&serverAddress, sizeof(serverAddress));
+	if (msg_len != real_send_msg_len) {
+		snprintf(log_msg, BUF_SIZE, "can't send data(%d/%d)", msg_len, real_send_msg_len);
+		php_log_err(log_msg);
+	}
 	close(client_socket);
 }
 
-time_t current_timestamp()
+time_t get_millisec()
 {
     struct timeval te; 
     gettimeofday(&te, NULL);
@@ -139,15 +150,19 @@ time_t current_timestamp()
 
 int get_super_global(char *msg, int len, const char* name)
 {
+
+
 	zval *super_global = NULL;
 	zval *data = NULL;
 	zend_string *str_data = NULL;
 	
 	if ((super_global = zend_hash_str_find(&EG(symbol_table), ZEND_STRL("_SERVER"))) == NULL) {
+		snprintf(msg, len, "%s", "no_data");
 		return FALSE;
 	}
 
 	if ((data = zend_hash_str_find(Z_ARRVAL_P(super_global), (name), strlen(name))) == NULL) {
+		snprintf(msg, len, "%s", "no_data");
 		return FALSE;
 	}
 
@@ -155,5 +170,18 @@ int get_super_global(char *msg, int len, const char* name)
 	snprintf(msg, len, "%s", ZSTR_VAL(str_data));
 
 	return TRUE;
+	/*
+	다른 코드
+	zval *super_global;
+	zval *data;
+	zend_string *str_data = NULL;
 
+	//zend_is_auto_global_str(ZEND_STRL("_SERVER"));
+	//super_global = &PG(http_globals)[TRACK_VARS_SERVER];
+	data = zend_hash_str_find(Z_ARRVAL_P(super_global), (name), strlen(name));
+	str_data = zend_string_init(Z_STRVAL_P(data), Z_STRLEN_P(data), 0); //free가 필요한 함수인지 조사
+	snprintf(msg, len, "%s", ZSTR_VAL(str_data));
+
+	return TRUE;
+	*/
 }
