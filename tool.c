@@ -5,6 +5,7 @@
 #include "php_ini.h"
 #include "php_apm.h"
 #include "tool.h"
+#include <errno.h>
 
 //ZEND_DECLARE_MODULE_GLOBALS(apm);
 ZEND_EXTERN_MODULE_GLOBALS(apm);
@@ -19,7 +20,6 @@ void send_data(char *msg)
 	char log_msg[BUF_SIZE];
 
 	if (APM_G(sock_type) == 1) { //udp
-		php_printf("udp");
 		if ((client_socket = socket(PF_INET, SOCK_DGRAM, 0)) == -1) {
 			//php_errors.log 시작할때 warning 로그는 생기는데 이건 안나온다...
 			php_log_err("can't create socket\n");
@@ -40,18 +40,20 @@ void send_data(char *msg)
 		}
 		close(client_socket);
 	} else { //tcp
-		if (client_socket = socket(PF_INET, SOCK_STREAM, 0) == -1) {
+		if ((client_socket = socket(PF_INET, SOCK_STREAM, 0)) == -1) {
 			php_log_err("can't create socket\n");
 			return;
 		}
-		memset(&serverAddress, 0, sizeof(serverAddress));
 
+		memset(&serverAddress, 0, sizeof(serverAddress));
 		serverAddress.sin_family = AF_INET;
 		serverAddress.sin_port = htons(APM_G(server_port));
 		inet_aton(APM_G(server_host), (struct in_addr*) &serverAddress.sin_addr.s_addr);
 
 		if (connect(client_socket, (struct sockaddr*)&serverAddress, sizeof(serverAddress)) == -1) {
 			php_log_err("can't conncet server");
+			//php_printf("Error: %s\n", strerror(errno));
+			close(client_socket);
 			return;
 		}
 

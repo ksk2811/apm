@@ -82,14 +82,14 @@ PHP_MSHUTDOWN_FUNCTION(apm)
 PHP_RINIT_FUNCTION(apm)
 {
 	if (APM_G(enabled) != 1) {
-		 return SUCCESS;
+		return SUCCESS;
 	}
 	//php_code에서 $_SERVER를 사용안해도 접근할 수 있게 해줌
 	zend_is_auto_global_str(ZEND_STRL("_SERVER")); 
 
 	//check_time
 	APM_G(start_time_ms) = get_millisec();
-	
+	 
 	//get data
 	get_super_global(APM_G(host), BUF_SIZE, "HTTP_HOST");
 	get_super_global(APM_G(uri), BUF_SIZE, "REQUEST_URI");
