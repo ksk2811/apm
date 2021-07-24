@@ -18,25 +18,46 @@ void send_data(char *msg)
 	int real_send_msg_len = 0;
 	char log_msg[BUF_SIZE];
 
-	if ((client_socket = socket(PF_INET, SOCK_DGRAM, 0)) == -1) {
-		//php_errors.log 시작할때 warning 로그는 생기는데 이건 안나온다...
-		php_log_err("can't create socket\n");
-		return;
-	}
+	if (APM_G(sock_type) == 1) { //udp
+		php_printf("udp");
+		if ((client_socket = socket(PF_INET, SOCK_DGRAM, 0)) == -1) {
+			//php_errors.log 시작할때 warning 로그는 생기는데 이건 안나온다...
+			php_log_err("can't create socket\n");
+			return;
+		}
 
-	memset(&serverAddress, 0, sizeof(serverAddress));
-	serverAddress.sin_family = AF_INET;
-	inet_aton(APM_G(server_host), (struct in_addr*) &serverAddress.sin_addr.s_addr);
-	serverAddress.sin_port = htons(APM_G(server_port));
-	server_addr_size = sizeof(serverAddress);
+		memset(&serverAddress, 0, sizeof(serverAddress));
+		serverAddress.sin_family = AF_INET;
+		inet_aton(APM_G(server_host), (struct in_addr*) &serverAddress.sin_addr.s_addr);
+		serverAddress.sin_port = htons(APM_G(server_port));
+		server_addr_size = sizeof(serverAddress);
 
-	msg_len = strlen(msg);
-	real_send_msg_len = sendto(client_socket, msg, msg_len, 0, (struct sockaddr*)&serverAddress, sizeof(serverAddress));
-	if (msg_len != real_send_msg_len) {
-		snprintf(log_msg, BUF_SIZE, "can't send data(%d/%d)", msg_len, real_send_msg_len);
-		php_log_err(log_msg);
+		msg_len = strlen(msg);
+		real_send_msg_len = sendto(client_socket, msg, msg_len, 0, (struct sockaddr*)&serverAddress, sizeof(serverAddress));
+		if (msg_len != real_send_msg_len) {
+			snprintf(log_msg, BUF_SIZE, "can't send data(%d/%d)", msg_len, real_send_msg_len);
+			php_log_err(log_msg);
+		}
+		close(client_socket);
+	} else { //tcp
+		if (client_socket = socket(PF_INET, SOCK_STREAM, 0) == -1) {
+			php_log_err("can't create socket\n");
+			return;
+		}
+		memset(&serverAddress, 0, sizeof(serverAddress));
+
+		serverAddress.sin_family = AF_INET;
+		serverAddress.sin_port = htons(APM_G(server_port));
+		inet_aton(APM_G(server_host), (struct in_addr*) &serverAddress.sin_addr.s_addr);
+
+		if (connect(client_socket, (struct sockaddr*)&serverAddress, sizeof(serverAddress)) == -1) {
+			php_log_err("can't conncet server");
+			return;
+		}
+
+		write(client_socket, msg, sizeof(msg));
+		close(client_socket);
 	}
-	close(client_socket);
 }
 
 time_t get_millisec()
@@ -50,7 +71,6 @@ time_t get_millisec()
 
 int get_super_global(char *msg, int len, const char* name)
 {
-
 
 	zval *super_global = NULL;
 	zval *data = NULL;

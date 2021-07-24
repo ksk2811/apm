@@ -32,6 +32,7 @@ ZEND_BEGIN_MODULE_GLOBALS(apm)
 	unsigned int enabled;
 	char *server_host;
 	unsigned int server_port;
+	unsigned int sock_type;
 	time_t start_time_ms;
 	time_t end_time_ms;
 

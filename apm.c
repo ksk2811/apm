@@ -4,6 +4,7 @@
 #include "php.h"
 #include "php_ini.h"
 #include "php_apm.h"
+#include "SAPI.h"
 #include "tool.h" 
 
 ZEND_DECLARE_MODULE_GLOBALS(apm);
@@ -38,6 +39,7 @@ PHP_INI_BEGIN()
 	STD_PHP_INI_ENTRY("apm.enabled", "0", PHP_INI_ALL, OnUpdateLong, enabled, zend_apm_globals, apm_globals)
 	STD_PHP_INI_ENTRY("apm.server_port", "8888", PHP_INI_ALL, OnUpdateLong, server_port, zend_apm_globals, apm_globals)
 	STD_PHP_INI_ENTRY("apm.server_host", "localhost", PHP_INI_ALL, OnUpdateStringUnempty, server_host, zend_apm_globals, apm_globals)
+	STD_PHP_INI_ENTRY("apm.sock_type", "1", PHP_INI_ALL, OnUpdateLong, sock_type, zend_apm_globals, apm_globals)
 PHP_INI_END()
 
 /*
@@ -79,6 +81,9 @@ PHP_MSHUTDOWN_FUNCTION(apm)
 
 PHP_RINIT_FUNCTION(apm)
 {
+	if (APM_G(enabled) != 1) {
+		 return SUCCESS;
+	}
 	//php_code에서 $_SERVER를 사용안해도 접근할 수 있게 해줌
 	zend_is_auto_global_str(ZEND_STRL("_SERVER")); 
 
@@ -90,10 +95,23 @@ PHP_RINIT_FUNCTION(apm)
 	get_super_global(APM_G(uri), BUF_SIZE, "REQUEST_URI");
 	get_super_global(APM_G(ip), BUF_SIZE, "REMOTE_ADDR");
 	get_super_global(APM_G(method), BUF_SIZE, "REQUEST_METHOD");
+
+	zend_llist_position pos;
+	sapi_header_struct* h;
+	for (h = (sapi_header_struct*)zend_llist_get_first_ex(&SG(sapi_headers).headers, &pos); 
+		h; 
+		h = (sapi_header_struct*)zend_llist_get_next_ex(&SG(sapi_headers).headers, &pos)) 
+	{
+		php_printf("SAPI! %.*s <br/>", h->header_len, h->header);
+	}
 }
 
 PHP_RSHUTDOWN_FUNCTION(apm)
 {
+	if (APM_G(enabled) != 1) {
+		 return SUCCESS;
+	}
+
 	//check_time
 	APM_G(end_time_ms) = get_millisec();
 

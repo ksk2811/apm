@@ -1,4 +1,3 @@
-#!/bin/php
 <?php
 class Server
 {
@@ -6,7 +5,7 @@ class Server
 	private $daemon_mod = true;
 	private $pid_file = '/tmp/php_daemon.pid';
 	private $pid;
-	private $port = 8080;
+	private $port = 8888;
 	private $max_clients = 10;
 	private $log_path = '/tmp/';
 	private $log_level = 3;
@@ -17,7 +16,7 @@ class Server
 	public $log_callback = null; 
 	public $command_callback = null;
 
-	public function __construct($call_func) {
+	public function __construct($call_func = null) {
 		if (is_callable($call_func)) {
 			$this->command_callback = $call_func;
 		}
@@ -50,18 +49,26 @@ EOT;
 		}
 
 		if (isset($options['s'])) { //stop
-			if (function_exists('posix_kill')) {
-				if (file_exists($this->pid_file)) {
-					    $pid = file_get_contents($this->pid_file);
-					    posix_kill($pid, 9);
-					    unlink($this->pid_file);
-					    exit(0);
-				} else {
-					die("file {$this->pid_file} dosent exist\n");
-				}
-			} else {
-				die("sorry don't support this options\n");
+			if (!file_exists($this->pid_file)) {
+				die("file {$this->pid_file} dosent exist\n");
 			}
+
+			$old_pid = trim(file_get_contents($this->pid_file));
+
+			if (!$old_pid) {
+				die("no data pid\n");
+			}
+
+			if (function_exists('posix_kill')) {
+			    posix_kill($pid, 9);
+			    unlink($this->pid_file);
+			    exit(0);
+			} else {
+				system("kill -9 $old_pid");
+			}
+			unlink($this->pid_file);
+			$this->log("server($old_pid): close");
+			die("server($old_pid) fisnish\n");
 		}
 
 		if (isset($options['n'])) { //no daemon
@@ -90,10 +97,12 @@ EOT;
 			exit(0);
 		}
 
-		if (!function_exists('posix_getpid')) {
+		if (function_exists('posix_getpid')) {
+			$this->pid = posix_getpid();
+		} else if (function_exists('getmypid')){
 			$this->pid = getmypid();
 		} else {
-			$this->pid = posix_getpid();
+			die("can't create pid file\n");
 		}
 
 		if (file_exists($this->pid_file)) {
@@ -132,6 +141,14 @@ EOT;
 	public function run() {
 		if ($this->daemon_mod) {
 			$this->daemon();
+		} else {
+			if (function_exists('posix_getpid')) {
+				$this->pid = posix_getpid();
+			} else if (function_exists('getmypid')){
+				$this->pid = getmypid();
+			} else {
+				die("can't create pid\n");
+			}
 		}
 
 		if ($this->server_run == 't') {
@@ -151,8 +168,7 @@ EOT;
 			die($err_msg);
 		}
 
-		if(!socket_bind($sock, 0, $this->port) )
-		{
+		if(!socket_bind($sock, 0, $this->port)) {
 			$err_msg = sprintf("server: dont bind udp socker: %d: %s", socket_last_error(), socket_strerror(socket_last_error()));
 			$this->log($err_msg);
 			die($err_msg);
@@ -191,6 +207,7 @@ EOT;
 			while(($pid = pcntl_waitpid(-1, $status, WNOHANG)) && ($pid > 0)) {
 				$self->current_sock_cnt--;
 				$self->log("server: child(pid:$pid) close");
+				$self->log("server: connected count($this->current_sock_cnt)");
 			}
 		});
 
@@ -239,6 +256,7 @@ EOT;
 			} else if ($pid > 0) { //parent
 				socket_close($client_sock);
 				$this->current_sock_cnt++;
+				$this->log("server: connected count($this->current_sock_cnt)");
 			} else { //child
 				socket_getpeername($client_sock, $c_ip,$c_port);
 				$this->log("server: client connected ({$c_ip}:{$c_port})");
@@ -284,16 +302,17 @@ EOT;
 
 }
 
-//$server = New Server();
-$server = New Server(function ($sock) {
-	$file_path = "/tmp/sum.csv";
-	if(socket_recv ($sock, $buf, 1024, MSG_WAITALL) !== FALSE) {
-		file_put_contents($file_path, $buf, FILE_APPEND);
-	} else {
-		$errorcode = socket_last_error();
-		$errormsg = socket_strerror($errorcode);
-		file_put_contents($file_path, sprintf("errorcode: %s errormsg:%s\n", $errorcode, $errormsg), FILE_APPEND);
-	}
-});
+$server = New Server();
+
+//$server = New Server(function ($sock) {
+//	$file_path = "/tmp/sum.csv";
+//	if(socket_recv ($sock, $buf, 1024, MSG_WAITALL) !== FALSE) {
+//		file_put_contents($file_path, $buf, FILE_APPEND);
+//	} else {
+//		$errorcode = socket_last_error();
+//		$errormsg = socket_strerror($errorcode);
+//		file_put_contents($file_path, sprintf("errorcode: %s errormsg:%s\n", $errorcode, $errormsg), FILE_APPEND);
+//	}
+//});
 $server->run();
 ?>
