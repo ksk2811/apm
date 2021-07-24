@@ -4,5 +4,5 @@ dnl Make sure that the comment is aligned:
 
 if test "$PHP_APM" != "no"; then
   AC_DEFINE(HAVE_APM, 1, [Whether you have apm])
-  PHP_NEW_EXTENSION(apm, apm.c, $ext_shared)
+  PHP_NEW_EXTENSION(apm, apm.c tool.c, $ext_shared)
 fi

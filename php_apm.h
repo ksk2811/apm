@@ -7,7 +7,6 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 
-
 #define PHP_APM_VERSION "0.1"
 #define PHP_APM_EXTNAME "apm"
 #define BUF_SIZE 1024
@@ -59,6 +58,4 @@ PHP_RSHUTDOWN_FUNCTION(apm);
 PHP_MINFO_FUNCTION(apm);
 
 //PHP_FUNCTION(apm_func);
-void send_data(char *msg);
-time_t get_millisec();
-int get_super_global(char *msg, int len, const char* name);
+
