@@ -89,7 +89,7 @@ PHP_RINIT_FUNCTION(apm)
 
 	//check_time
 	APM_G(start_time_ms) = get_millisec();
-	 
+	
 	//get data
 	get_super_global(APM_G(host), BUF_SIZE, "HTTP_HOST");
 	get_super_global(APM_G(uri), BUF_SIZE, "REQUEST_URI");
@@ -116,7 +116,7 @@ PHP_RSHUTDOWN_FUNCTION(apm)
 	APM_G(end_time_ms) = get_millisec();
 
 	char msg[BUF_SIZE];
-	snprintf(msg, BUF_SIZE, "%ld, %ld, %s%s, %s, %s\n",
+	snprintf(msg, BUF_SIZE, "%ld, %ld, %s%s, %s, %s",
 		APM_G(start_time_ms),
 		APM_G(end_time_ms) - APM_G(start_time_ms),
 		APM_G(host),
@@ -125,5 +125,7 @@ PHP_RSHUTDOWN_FUNCTION(apm)
 		APM_G(method));
 
 	//send data
+	php_log_err("before send_data!!!!"); //미작동..
+	php_log_err_with_severity("before send_data!!!!!!!!!!!!!!", LOG_ERR); //미작동
 	send_data(msg);
 }

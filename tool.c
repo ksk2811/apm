@@ -22,7 +22,7 @@ void send_data(char *msg)
 	if (APM_G(sock_type) == 1) { //udp
 		if ((client_socket = socket(PF_INET, SOCK_DGRAM, 0)) == -1) {
 			//php_errors.log 시작할때 warning 로그는 생기는데 이건 안나온다...
-			php_log_err("can't create socket\n");
+			php_log_err("can't create socket");
 			return;
 		}
 
@@ -41,7 +41,7 @@ void send_data(char *msg)
 		close(client_socket);
 	} else { //tcp
 		if ((client_socket = socket(PF_INET, SOCK_STREAM, 0)) == -1) {
-			php_log_err("can't create socket\n");
+			php_log_err("can't create socket");
 			return;
 		}
 
@@ -52,7 +52,6 @@ void send_data(char *msg)
 
 		if (connect(client_socket, (struct sockaddr*)&serverAddress, sizeof(serverAddress)) == -1) {
 			php_log_err("can't conncet server");
-			//php_printf("Error: %s\n", strerror(errno));
 			close(client_socket);
 			return;
 		}
@@ -88,8 +87,9 @@ int get_super_global(char *msg, int len, const char* name)
 		return FALSE;
 	}
 
-	str_data = zend_string_init(Z_STRVAL_P(data), Z_STRLEN_P(data), 0); //free가 필요한 함수인지 조사
+	str_data = zend_string_init(Z_STRVAL_P(data), Z_STRLEN_P(data), 0);
 	snprintf(msg, len, "%s", ZSTR_VAL(str_data));
+	zend_string_release(str_data);
 
 	return TRUE;
 	/*
