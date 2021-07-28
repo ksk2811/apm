@@ -22,7 +22,8 @@ void send_data(char *msg)
 	if (APM_G(sock_type) == 1) { //udp
 		if ((client_socket = socket(PF_INET, SOCK_DGRAM, 0)) == -1) {
 			//php_errors.log 시작할때 warning 로그는 생기는데 이건 안나온다...
-			php_log_err("can't create socket");
+			//php_log_err("can't create socket");
+			php_syslog(LOG_NOTICE, "can't create socket");
 			return;
 		}
 
@@ -34,14 +35,18 @@ void send_data(char *msg)
 
 		msg_len = strlen(msg);
 		real_send_msg_len = sendto(client_socket, msg, msg_len, 0, (struct sockaddr*)&serverAddress, sizeof(serverAddress));
+		php_printf("data len is %d", msg_len);
+		php_printf("real data len is %d", real_send_msg_len);
 		if (msg_len != real_send_msg_len) {
 			snprintf(log_msg, BUF_SIZE, "can't send data(%d/%d)", msg_len, real_send_msg_len);
-			php_log_err(log_msg);
+			//php_log_err(log_msg);
+			php_syslog(LOG_NOTICE, log_msg);
 		}
 		close(client_socket);
 	} else { //tcp
 		if ((client_socket = socket(PF_INET, SOCK_STREAM, 0)) == -1) {
-			php_log_err("can't create socket");
+			//php_log_err("can't create socket");
+			php_syslog(LOG_NOTICE, "can't create socket");
 			return;
 		}
 
@@ -51,7 +56,8 @@ void send_data(char *msg)
 		inet_aton(APM_G(server_host), (struct in_addr*) &serverAddress.sin_addr.s_addr);
 
 		if (connect(client_socket, (struct sockaddr*)&serverAddress, sizeof(serverAddress)) == -1) {
-			php_log_err("can't conncet server");
+			//php_log_err("can't conncet server");
+			php_syslog(LOG_NOTICE, "can't conncet socket");
 			close(client_socket);
 			return;
 		}

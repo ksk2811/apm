@@ -116,8 +116,9 @@ PHP_RSHUTDOWN_FUNCTION(apm)
 	APM_G(end_time_ms) = get_millisec();
 
 	char msg[BUF_SIZE];
-	snprintf(msg, BUF_SIZE, "%ld, %ld, %s%s, %s, %s",
+	snprintf(msg, BUF_SIZE, "%ld, %ld, %ld, %s%s, %s, %s",
 		APM_G(start_time_ms),
+		APM_G(end_time_ms),
 		APM_G(end_time_ms) - APM_G(start_time_ms),
 		APM_G(host),
 		APM_G(uri),
@@ -125,7 +126,8 @@ PHP_RSHUTDOWN_FUNCTION(apm)
 		APM_G(method));
 
 	//send data
-	php_log_err("before send_data!!!!"); //미작동..
-	php_log_err_with_severity("before send_data!!!!!!!!!!!!!!", LOG_ERR); //미작동
+	//php_syslog(LOG_NOTICE, "AAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+	//php_log_err("BBBBBBBBBBBBBBBBBBBBBBBB"); //미작동..
+	//php_log_err_with_severity("CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC", LOG_ERR); //미작동
 	send_data(msg);
 }
