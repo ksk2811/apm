@@ -120,7 +120,7 @@ PHP_RSHUTDOWN_FUNCTION(apm)
 
 
 	char msg[BUF_SIZE];
-	snprintf(msg, BUF_SIZE, "%ld, %ld, %ld, %s%s, %s, %s, %f, %f",
+	snprintf(msg, BUF_SIZE, "%ld, %ld, %ld, %s%s, %s, %s, %.0f, %.2f",
 		APM_G(start_time_ms),
 		APM_G(end_time_ms),
 		APM_G(end_time_ms) - APM_G(start_time_ms),
