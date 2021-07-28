@@ -96,6 +96,7 @@ PHP_RINIT_FUNCTION(apm)
 	get_super_global(APM_G(ip), BUF_SIZE, "REMOTE_ADDR");
 	get_super_global(APM_G(method), BUF_SIZE, "REQUEST_METHOD");
 
+	//헤더 데이터 임시 코드
 	zend_llist_position pos;
 	sapi_header_struct* h;
 	for (h = (sapi_header_struct*)zend_llist_get_first_ex(&SG(sapi_headers).headers, &pos); 
@@ -114,18 +115,22 @@ PHP_RSHUTDOWN_FUNCTION(apm)
 
 	//check_time
 	APM_G(end_time_ms) = get_millisec();
+	APM_G(mem_usage) = zend_memory_peak_usage(1); //리퀘스 종료시에 호출해야 실제 코드 수행후의 최대 메모리 사용량 확인 가능
+	getloadavg(APM_G(cpu_usage), 3);
+
 
 	char msg[BUF_SIZE];
-	snprintf(msg, BUF_SIZE, "%ld, %ld, %ld, %s%s, %s, %s",
+	snprintf(msg, BUF_SIZE, "%ld, %ld, %ld, %s%s, %s, %s, %f, %f",
 		APM_G(start_time_ms),
 		APM_G(end_time_ms),
 		APM_G(end_time_ms) - APM_G(start_time_ms),
 		APM_G(host),
 		APM_G(uri),
 		APM_G(ip),
-		APM_G(method));
+		APM_G(method),
+		APM_G(mem_usage),
+		APM_G(cpu_usage)[0]); //우선 1분 전의 cpu만 전송
 
-	//send data
 	//php_syslog(LOG_NOTICE, "AAAAAAAAAAAAAAAAAAAAAAAAAAAA");
 	//php_log_err("BBBBBBBBBBBBBBBBBBBBBBBB"); //미작동..
 	//php_log_err_with_severity("CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC", LOG_ERR); //미작동

@@ -41,6 +41,8 @@ ZEND_BEGIN_MODULE_GLOBALS(apm)
 	char host[BUF_SIZE];
 	char ip[BUF_SIZE];
 	char method[BUF_SIZE];
+	double mem_usage;
+	double cpu_usage[3];
 ZEND_END_MODULE_GLOBALS(apm)
 	
 //ZEND_DECLARE_MODULE_GLOBALS(apm)

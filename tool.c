@@ -35,8 +35,6 @@ void send_data(char *msg)
 
 		msg_len = strlen(msg);
 		real_send_msg_len = sendto(client_socket, msg, msg_len, 0, (struct sockaddr*)&serverAddress, sizeof(serverAddress));
-		php_printf("data len is %d", msg_len);
-		php_printf("real data len is %d", real_send_msg_len);
 		if (msg_len != real_send_msg_len) {
 			snprintf(log_msg, BUF_SIZE, "can't send data(%d/%d)", msg_len, real_send_msg_len);
 			//php_log_err(log_msg);
