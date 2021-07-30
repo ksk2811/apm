@@ -10,6 +10,11 @@
 ZEND_DECLARE_MODULE_GLOBALS(apm);
 //ZEND_EXTERN_MODULE_GLOBALS(apm);
 
+struct rusage start_usage;
+struct rusage end_usage;
+time_t usr_cpu;
+time_t sys_cpu;
+
 /*
  현재는 필요없다.
 static zend_function_entry apm_functions[] = {
@@ -84,6 +89,13 @@ PHP_RINIT_FUNCTION(apm)
 	if (APM_G(enabled) != 1) {
 		return SUCCESS;
 	}
+
+	//check cpu
+	memset(&start_usage, 0, sizeof(struct rusage));
+	if (getrusage(RUSAGE_SELF, &start_usage) != 0) {
+		//todo error	
+	}
+	
 	//php_code에서 $_SERVER를 사용안해도 접근할 수 있게 해줌
 	zend_is_auto_global_str(ZEND_STRL("_SERVER")); 
 
@@ -115,24 +127,31 @@ PHP_RSHUTDOWN_FUNCTION(apm)
 
 	//check_time
 	APM_G(end_time_ms) = get_millisec();
-	APM_G(mem_usage) = zend_memory_peak_usage(1); //리퀘스 종료시에 호출해야 실제 코드 수행후의 최대 메모리 사용량 확인 가능
-	getloadavg(APM_G(cpu_usage), 3);
+	double peak_mem_usage = zend_memory_peak_usage(1);
+
+	memset(&end_usage, 0, sizeof(struct rusage));
+	if (getrusage(RUSAGE_SELF, &end_usage) != 0) {
+		//todo error	
+	}
+
+	//check cpu
+	usr_cpu = ((end_usage.ru_utime.tv_sec - start_usage.ru_utime.tv_sec) * 1000000) + end_usage.ru_utime.tv_usec - start_usage.ru_utime.tv_usec;
+	sys_cpu = ((end_usage.ru_stime.tv_sec - start_usage.ru_stime.tv_sec) * 1000000) + end_usage.ru_stime.tv_usec;// - start_usage.ru_stime.tv_usec;
 
 
 	char msg[BUF_SIZE];
-	snprintf(msg, BUF_SIZE, "%ld, %ld, %ld, %s%s, %s, %s, %.0f, %.2f",
-		APM_G(start_time_ms),
-		APM_G(end_time_ms),
-		APM_G(end_time_ms) - APM_G(start_time_ms),
+	snprintf(msg, BUF_SIZE, "%ld, %ld, %ld, %s%s, %s, %s, %.0f, %ld, %ld",
+		APM_G(start_time_ms), //millisecond
+		APM_G(end_time_ms), //millisecond
+		APM_G(end_time_ms) - APM_G(start_time_ms), //millisecond
 		APM_G(host),
 		APM_G(uri),
 		APM_G(ip),
 		APM_G(method),
-		APM_G(mem_usage),
-		APM_G(cpu_usage)[0]); //우선 1분 전의 cpu만 전송
-
-	//php_syslog(LOG_NOTICE, "AAAAAAAAAAAAAAAAAAAAAAAAAAAA");
-	//php_log_err("BBBBBBBBBBBBBBBBBBBBBBBB"); //미작동..
-	//php_log_err_with_severity("CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC", LOG_ERR); //미작동
+		peak_mem_usage, //byte
+		usr_cpu, //micro second
+		sys_cpu //micro second
+	);
+	php_printf("msg is %s\n", msg);
 	send_data(msg);
 }

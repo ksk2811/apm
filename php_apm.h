@@ -6,12 +6,14 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+# include <sys/resource.h>
 
 #define PHP_APM_VERSION "0.1"
 #define PHP_APM_EXTNAME "apm"
 #define BUF_SIZE 1024
 #define FALSE 0
 #define TRUE 1
+#define SEC_TO_USEC(sec) ((sec) * 1000000.00)
 
 extern zend_module_entry apm_module_entry;
 #define phpext_apm_ptr &apm_module_entry
@@ -41,8 +43,7 @@ ZEND_BEGIN_MODULE_GLOBALS(apm)
 	char host[BUF_SIZE];
 	char ip[BUF_SIZE];
 	char method[BUF_SIZE];
-	double mem_usage;
-	double cpu_usage[3];
+
 ZEND_END_MODULE_GLOBALS(apm)
 	
 //ZEND_DECLARE_MODULE_GLOBALS(apm)
