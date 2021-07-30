@@ -74,25 +74,33 @@ time_t get_millisec()
     return milliseconds;
 }
 
-int get_super_global(char *msg, int len, const char* name)
+int get_super_global(char **msg, int len, const char* name)
 {
 
 	zval *super_global = NULL;
 	zval *data = NULL;
 	zend_string *str_data = NULL;
+	int msg_size = 0;
 	
 	if ((super_global = zend_hash_str_find(&EG(symbol_table), ZEND_STRL("_SERVER"))) == NULL) {
-		snprintf(msg, len, "%s", "no_data");
+		msg_size = snprintf(NULL, 0, "%s", "no_data") + 1;
+		*msg = malloc(msg_size);
+		//*msg = pemalloc(msg_size, 1);
 		return FALSE;
 	}
 
 	if ((data = zend_hash_str_find(Z_ARRVAL_P(super_global), (name), strlen(name))) == NULL) {
-		snprintf(msg, len, "%s", "no_data");
+		msg_size = snprintf(NULL, 0, "%s", "no_data") + 1;
+		*msg = malloc(msg_size);
+		//*msg = pemalloc(msg_size, 1);
 		return FALSE;
 	}
 
 	str_data = zend_string_init(Z_STRVAL_P(data), Z_STRLEN_P(data), 0);
-	snprintf(msg, len, "%s", ZSTR_VAL(str_data));
+	msg_size = snprintf(NULL, 0, "%s", ZSTR_VAL(str_data)) + 1;
+	*msg = malloc(msg_size);
+	//*msg = pemalloc(msg_size, 0);
+	snprintf(*msg, msg_size, "%s", ZSTR_VAL(str_data));
 	zend_string_release(str_data);
 
 	return TRUE;

@@ -12,8 +12,12 @@ ZEND_DECLARE_MODULE_GLOBALS(apm);
 
 struct rusage start_usage;
 struct rusage end_usage;
-time_t usr_cpu;
-time_t sys_cpu;
+time_t start_time_ms;
+time_t end_time_ms;
+char *uri;
+char *host;
+char *ip;
+char *method;
 
 /*
  현재는 필요없다.
@@ -100,13 +104,13 @@ PHP_RINIT_FUNCTION(apm)
 	zend_is_auto_global_str(ZEND_STRL("_SERVER")); 
 
 	//check_time
-	APM_G(start_time_ms) = get_millisec();
+	start_time_ms = get_millisec();
 	
 	//get data
-	get_super_global(APM_G(host), BUF_SIZE, "HTTP_HOST");
-	get_super_global(APM_G(uri), BUF_SIZE, "REQUEST_URI");
-	get_super_global(APM_G(ip), BUF_SIZE, "REMOTE_ADDR");
-	get_super_global(APM_G(method), BUF_SIZE, "REQUEST_METHOD");
+	get_super_global(&host, BUF_SIZE, "HTTP_HOST");
+	get_super_global(&uri, BUF_SIZE, "REQUEST_URI");
+	get_super_global(&ip, BUF_SIZE, "REMOTE_ADDR");
+	get_super_global(&method, BUF_SIZE, "REQUEST_METHOD");
 
 	//헤더 데이터 임시 코드
 	zend_llist_position pos;
@@ -125,33 +129,41 @@ PHP_RSHUTDOWN_FUNCTION(apm)
 		 return SUCCESS;
 	}
 
-	//check_time
-	APM_G(end_time_ms) = get_millisec();
-	double peak_mem_usage = zend_memory_peak_usage(1);
-
 	memset(&end_usage, 0, sizeof(struct rusage));
 	if (getrusage(RUSAGE_SELF, &end_usage) != 0) {
 		//todo error	
 	}
 
 	//check cpu
-	usr_cpu = ((end_usage.ru_utime.tv_sec - start_usage.ru_utime.tv_sec) * 1000000) + end_usage.ru_utime.tv_usec - start_usage.ru_utime.tv_usec;
-	sys_cpu = ((end_usage.ru_stime.tv_sec - start_usage.ru_stime.tv_sec) * 1000000) + end_usage.ru_stime.tv_usec;// - start_usage.ru_stime.tv_usec;
-
+	time_t usr_cpu = ((end_usage.ru_utime.tv_sec - start_usage.ru_utime.tv_sec) * 1000000) + end_usage.ru_utime.tv_usec - start_usage.ru_utime.tv_usec;
+	time_t sys_cpu = ((end_usage.ru_stime.tv_sec - start_usage.ru_stime.tv_sec) * 1000000) + end_usage.ru_stime.tv_usec;// - start_usage.ru_stime.tv_usec;
+	
+	//check_time
+	end_time_ms = get_millisec();
+	double peak_mem_usage = zend_memory_peak_usage(1);
 
 	char msg[BUF_SIZE];
 	snprintf(msg, BUF_SIZE, "%ld, %ld, %ld, %s%s, %s, %s, %.0f, %ld, %ld",
-		APM_G(start_time_ms), //millisecond
-		APM_G(end_time_ms), //millisecond
-		APM_G(end_time_ms) - APM_G(start_time_ms), //millisecond
-		APM_G(host),
-		APM_G(uri),
-		APM_G(ip),
-		APM_G(method),
+		start_time_ms, //millisecond
+		end_time_ms, //millisecond
+		end_time_ms - start_time_ms, //millisecond
+		host,
+		uri,
+		ip,
+		method,
 		peak_mem_usage, //byte
 		usr_cpu, //micro second
 		sys_cpu //micro second
 	);
-	php_printf("msg is %s\n", msg);
+
 	send_data(msg);
+	free(host); host = NULL;
+	free(ip); ip = NULL;
+	free(uri); uri = NULL;
+	free(method); method =NULL;
+
+	//pefree(host, 0);
+	//pefree(ip, 0);
+	//pefree(uri, 0);
+	//pefree(method, 0);
 }

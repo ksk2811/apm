@@ -9,4 +9,4 @@
 
 void send_data(char *msg);
 time_t get_millisec();
-int get_super_global(char *msg, int len, const char* name);
+int get_super_global(char **msg, int len, const char* name);

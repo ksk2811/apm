@@ -35,14 +35,7 @@ ZEND_BEGIN_MODULE_GLOBALS(apm)
 	char *server_host;
 	unsigned int server_port;
 	unsigned int sock_type;
-	time_t start_time_ms;
-	time_t end_time_ms;
 
-	char msg[BUF_SIZE];
-	char uri[BUF_SIZE];
-	char host[BUF_SIZE];
-	char ip[BUF_SIZE];
-	char method[BUF_SIZE];
 
 ZEND_END_MODULE_GLOBALS(apm)
 	
