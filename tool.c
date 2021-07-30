@@ -17,7 +17,7 @@ void send_data(char *msg)
 	int server_addr_size;
 	int msg_len = 0;
 	int real_send_msg_len = 0;
-	char log_msg[BUF_SIZE];
+	char log_msg[128];
 
 	if (APM_G(sock_type) == 1) { //udp
 		if ((client_socket = socket(PF_INET, SOCK_DGRAM, 0)) == -1) {
@@ -36,7 +36,7 @@ void send_data(char *msg)
 		msg_len = strlen(msg);
 		real_send_msg_len = sendto(client_socket, msg, msg_len, 0, (struct sockaddr*)&serverAddress, sizeof(serverAddress));
 		if (msg_len != real_send_msg_len) {
-			snprintf(log_msg, BUF_SIZE, "can't send data(%d/%d)", msg_len, real_send_msg_len);
+			snprintf(log_msg, 128, "can't send data(%d/%d)", msg_len, real_send_msg_len);
 			//php_log_err(log_msg);
 			php_syslog(LOG_NOTICE, log_msg);
 		}
@@ -74,7 +74,7 @@ time_t get_millisec()
     return milliseconds;
 }
 
-int get_super_global(char **msg, int len, const char* name)
+int get_heap_super_global(char **msg, const char* name)
 {
 
 	zval *super_global = NULL;
@@ -120,3 +120,25 @@ int get_super_global(char **msg, int len, const char* name)
 	*/
 }
 
+int get_super_global(char *msg, int len, const char* name)
+{
+        zval *super_global = NULL;
+        zval *data = NULL;
+        zend_string *str_data = NULL;
+    
+        if ((super_global = zend_hash_str_find(&EG(symbol_table), ZEND_STRL("_SERVER"))) == NULL) {
+                snprintf(msg, len, "%s", "no_data");
+                return FALSE;
+        }   
+
+        if ((data = zend_hash_str_find(Z_ARRVAL_P(super_global), (name), strlen(name))) == NULL) {
+                snprintf(msg, len, "%s", "no_data");
+                return FALSE;
+        }   
+
+        str_data = zend_string_init(Z_STRVAL_P(data), Z_STRLEN_P(data), 0); 
+        snprintf(msg, len, "%s", ZSTR_VAL(str_data));
+        zend_string_release(str_data);
+
+        return TRUE;
+}

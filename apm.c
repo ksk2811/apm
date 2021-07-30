@@ -16,8 +16,8 @@ time_t start_time_ms;
 time_t end_time_ms;
 char *uri;
 char *host;
-char *ip;
-char *method;
+char ip[IP_LEN];
+char method[METHOD_LEN];
 
 /*
  현재는 필요없다.
@@ -107,10 +107,10 @@ PHP_RINIT_FUNCTION(apm)
 	start_time_ms = get_millisec();
 	
 	//get data
-	get_super_global(&host, BUF_SIZE, "HTTP_HOST");
-	get_super_global(&uri, BUF_SIZE, "REQUEST_URI");
-	get_super_global(&ip, BUF_SIZE, "REMOTE_ADDR");
-	get_super_global(&method, BUF_SIZE, "REQUEST_METHOD");
+	get_heap_super_global(&host, "HTTP_HOST");
+	get_heap_super_global(&uri, "REQUEST_URI");
+	get_super_global(ip, IP_LEN, "REMOTE_ADDR");
+	get_super_global(method, METHOD_LEN, "REQUEST_METHOD");
 
 	//헤더 데이터 임시 코드
 	zend_llist_position pos;
@@ -142,8 +142,22 @@ PHP_RSHUTDOWN_FUNCTION(apm)
 	end_time_ms = get_millisec();
 	double peak_mem_usage = zend_memory_peak_usage(1);
 
-	char msg[BUF_SIZE];
-	snprintf(msg, BUF_SIZE, "%ld, %ld, %ld, %s%s, %s, %s, %.0f, %ld, %ld",
+	char *msg = NULL;
+	int msg_size = snprintf(NULL, 0, "%ld, %ld, %ld, %s%s, %s, %s, %.0f, %ld, %ld",
+		start_time_ms, //millisecond
+		end_time_ms, //millisecond
+		end_time_ms - start_time_ms, //millisecond
+		host,
+		uri,
+		ip,
+		method,
+		peak_mem_usage, //byte
+		usr_cpu, //micro second
+		sys_cpu //micro second
+	) + 1;
+	msg = malloc(msg_size);
+
+	snprintf(msg, msg_size, "%ld, %ld, %ld, %s%s, %s, %s, %.0f, %ld, %ld",
 		start_time_ms, //millisecond
 		end_time_ms, //millisecond
 		end_time_ms - start_time_ms, //millisecond
@@ -155,13 +169,14 @@ PHP_RSHUTDOWN_FUNCTION(apm)
 		usr_cpu, //micro second
 		sys_cpu //micro second
 	);
+	
 
 	send_data(msg);
 	free(host); host = NULL;
-	free(ip); ip = NULL;
 	free(uri); uri = NULL;
-	free(method); method =NULL;
-
+	free(msg); msg = NULL;
+	memset(&ip, 0, IP_LEN);
+	memset(&method, 0, METHOD_LEN);
 	//pefree(host, 0);
 	//pefree(ip, 0);
 	//pefree(uri, 0);

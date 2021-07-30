@@ -10,7 +10,8 @@
 
 #define PHP_APM_VERSION "0.1"
 #define PHP_APM_EXTNAME "apm"
-#define BUF_SIZE 1024
+#define IP_LEN 16
+#define METHOD_LEN 8
 #define FALSE 0
 #define TRUE 1
 #define SEC_TO_USEC(sec) ((sec) * 1000000.00)
