@@ -35,9 +35,8 @@ void send_data(char *msg)
 
 		msg_len = strlen(msg);
 		real_send_msg_len = sendto(client_socket, msg, msg_len, 0, (struct sockaddr*)&serverAddress, sizeof(serverAddress));
-		if (msg_len != real_send_msg_len) {
+		if (real_send_msg_len < 0) {
 			snprintf(log_msg, 128, "can't send data(%d/%d)", msg_len, real_send_msg_len);
-			//php_log_err(log_msg);
 			php_syslog(LOG_NOTICE, log_msg);
 		}
 		close(client_socket);
@@ -54,13 +53,12 @@ void send_data(char *msg)
 		inet_aton(APM_G(server_host), (struct in_addr*) &serverAddress.sin_addr.s_addr);
 
 		if (connect(client_socket, (struct sockaddr*)&serverAddress, sizeof(serverAddress)) == -1) {
-			//php_log_err("can't conncet server");
 			php_syslog(LOG_NOTICE, "can't conncet socket");
 			close(client_socket);
 			return;
 		}
 
-		write(client_socket, msg, sizeof(msg));
+		write(client_socket, msg, strlen(msg));
 		close(client_socket);
 	}
 }
@@ -84,23 +82,32 @@ int get_heap_super_global(char **msg, const char* name)
 	
 	if ((super_global = zend_hash_str_find(&EG(symbol_table), ZEND_STRL("_SERVER"))) == NULL) {
 		msg_size = snprintf(NULL, 0, "%s", "no_data") + 1;
-		*msg = malloc(msg_size);
+		if ((*msg = malloc(msg_size)) != NULL) {
+			snprintf(msg, msg_size, "%s", "no_data") + 1;
+		} else {
+			php_syslog(LOG_NOTICE,"malloc failed (_SERVER)");
+		}
 		//*msg = pemalloc(msg_size, 1);
 		return FALSE;
 	}
 
 	if ((data = zend_hash_str_find(Z_ARRVAL_P(super_global), (name), strlen(name))) == NULL) {
 		msg_size = snprintf(NULL, 0, "%s", "no_data") + 1;
-		*msg = malloc(msg_size);
-		//*msg = pemalloc(msg_size, 1);
+		if ((*msg = malloc(msg_size)) != NULL) {
+			snprintf(*msg, msg_size, "%s", "no_data");
+		} else {
+			php_syslog(LOG_NOTICE,"malloc failed %s", name);
+		}
 		return FALSE;
 	}
 
 	str_data = zend_string_init(Z_STRVAL_P(data), Z_STRLEN_P(data), 0);
 	msg_size = snprintf(NULL, 0, "%s", ZSTR_VAL(str_data)) + 1;
-	*msg = malloc(msg_size);
-	//*msg = pemalloc(msg_size, 0);
-	snprintf(*msg, msg_size, "%s", ZSTR_VAL(str_data));
+	if ((*msg = malloc(msg_size)) != NULL) {
+		snprintf(*msg, msg_size, "%s", ZSTR_VAL(str_data));
+	} else {
+		php_syslog(LOG_NOTICE, "malloc failed msg");
+	}
 	zend_string_release(str_data);
 
 	return TRUE;

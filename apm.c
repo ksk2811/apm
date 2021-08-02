@@ -113,6 +113,7 @@ PHP_RINIT_FUNCTION(apm)
 	get_super_global(method, METHOD_LEN, "REQUEST_METHOD");
 
 	//헤더 데이터 임시 코드
+	/*
 	zend_llist_position pos;
 	sapi_header_struct* h;
 	for (h = (sapi_header_struct*)zend_llist_get_first_ex(&SG(sapi_headers).headers, &pos); 
@@ -121,6 +122,7 @@ PHP_RINIT_FUNCTION(apm)
 	{
 		php_printf("SAPI! %.*s <br/>", h->header_len, h->header);
 	}
+	*/
 }
 
 PHP_RSHUTDOWN_FUNCTION(apm)
@@ -170,6 +172,14 @@ PHP_RSHUTDOWN_FUNCTION(apm)
 		sys_cpu //micro second
 	);
 	
+//	char *test = NULL;
+//	php_printf("before emalloc");
+//	php_printf("emalloc result is %d\n", emalloc(999999999999999999999)); 
+//	php_printf("after emalloc");
+
+//	php_printf("before malloc");
+//	php_printf("malloc result is %d\n", malloc(999999999999999999999)); 
+//	php_printf("after malloc");
 
 	send_data(msg);
 	free(host); host = NULL;
@@ -177,8 +187,4 @@ PHP_RSHUTDOWN_FUNCTION(apm)
 	free(msg); msg = NULL;
 	memset(&ip, 0, IP_LEN);
 	memset(&method, 0, METHOD_LEN);
-	//pefree(host, 0);
-	//pefree(ip, 0);
-	//pefree(uri, 0);
-	//pefree(method, 0);
 }
