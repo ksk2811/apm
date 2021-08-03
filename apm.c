@@ -145,33 +145,19 @@ PHP_RSHUTDOWN_FUNCTION(apm)
 	double peak_mem_usage = zend_memory_peak_usage(1);
 
 	char *msg = NULL;
-	int msg_size = snprintf(NULL, 0, "%ld, %ld, %ld, %s%s, %s, %s, %.0f, %ld, %ld",
-		start_time_ms, //millisecond
-		end_time_ms, //millisecond
-		end_time_ms - start_time_ms, //millisecond
-		host,
-		uri,
-		ip,
-		method,
-		peak_mem_usage, //byte
-		usr_cpu, //micro second
-		sys_cpu //micro second
-	) + 1;
-	msg = malloc(msg_size);
-
-	snprintf(msg, msg_size, "%ld, %ld, %ld, %s%s, %s, %s, %.0f, %ld, %ld",
-		start_time_ms, //millisecond
-		end_time_ms, //millisecond
-		end_time_ms - start_time_ms, //millisecond
-		host,
-		uri,
-		ip,
-		method,
-		peak_mem_usage, //byte
-		usr_cpu, //micro second
-		sys_cpu //micro second
+	msg = snprintf_heap("%ld, %ld, %ld, %s%s, %s, %s, %.0f, %ld, %ld"
+		,start_time_ms //millisecond
+		,end_time_ms //millisecond
+		,end_time_ms - start_time_ms //millisecond
+		,host
+		,uri
+		,ip
+		,method
+		,peak_mem_usage //byte
+		,usr_cpu //micro second
+		,sys_cpu //micro second
 	);
-	
+
 //	char *test = NULL;
 //	php_printf("before emalloc");
 //	php_printf("emalloc result is %d\n", emalloc(999999999999999999999)); 
@@ -182,9 +168,22 @@ PHP_RSHUTDOWN_FUNCTION(apm)
 //	php_printf("after malloc");
 
 	send_data(msg);
-	free(host); host = NULL;
-	free(uri); uri = NULL;
-	free(msg); msg = NULL;
+
+	if (msg) {
+		free(msg);
+		msg = NULL;
+	}
+
+	if (host) {
+		free(host);
+		host = NULL;
+	}
+
+	if (uri) {
+		free(uri);
+		uri = NULL;
+	}
+
 	memset(&ip, 0, IP_LEN);
 	memset(&method, 0, METHOD_LEN);
 }

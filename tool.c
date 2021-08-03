@@ -149,3 +149,22 @@ int get_super_global(char *msg, int len, const char* name)
 
         return TRUE;
 }
+
+char* snprintf_heap(char *fmt, ...)
+{
+	char *msg = NULL;
+	int msg_size;
+	va_list ap1, ap2;
+
+	va_start(ap1, fmt);
+	va_copy(ap2, ap1);
+
+	msg_size = vsnprintf(NULL ,0, fmt, ap1) + 1;
+	msg = malloc(msg_size);
+	va_end(ap1);
+
+	vsnprintf(msg, msg_size, fmt, ap2);
+	va_end(ap2);
+
+	return msg;
+}
