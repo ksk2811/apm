@@ -18,6 +18,9 @@ char *uri;
 char *host;
 char ip[IP_LEN];
 char method[METHOD_LEN];
+double start_mem;
+double end_mem;
+unsigned int rusage_fail_flag = 0;
 
 /*
  현재는 필요없다.
@@ -97,8 +100,11 @@ PHP_RINIT_FUNCTION(apm)
 	//check cpu
 	memset(&start_usage, 0, sizeof(struct rusage));
 	if (getrusage(RUSAGE_SELF, &start_usage) != 0) {
-		//todo error	
+		rusage_fail_flag = 1;
+		php_syslog(LOG_NOTICE, "getrusage failed(start)");
 	}
+
+	start_mem = zend_memory_usage(1);
 	
 	//php_code에서 $_SERVER를 사용안해도 접근할 수 있게 해줌
 	zend_is_auto_global_str(ZEND_STRL("_SERVER")); 
@@ -131,21 +137,28 @@ PHP_RSHUTDOWN_FUNCTION(apm)
 		 return SUCCESS;
 	}
 
+	time_t usr_cpu;
+	time_t sys_cpu;
+
 	memset(&end_usage, 0, sizeof(struct rusage));
 	if (getrusage(RUSAGE_SELF, &end_usage) != 0) {
-		//todo error	
+		rusage_fail_flag = 1;
+		php_syslog(LOG_NOTICE, "getrusage failed(end)");
 	}
 
-	//check cpu
-	time_t usr_cpu = ((end_usage.ru_utime.tv_sec - start_usage.ru_utime.tv_sec) * 1000000) + end_usage.ru_utime.tv_usec - start_usage.ru_utime.tv_usec;
-	time_t sys_cpu = ((end_usage.ru_stime.tv_sec - start_usage.ru_stime.tv_sec) * 1000000) + end_usage.ru_stime.tv_usec;// - start_usage.ru_stime.tv_usec;
-	
+	end_mem = zend_memory_usage(1);
+
+	if (rusage_fail_flag == 0) {
+		usr_cpu = ((end_usage.ru_utime.tv_sec - start_usage.ru_utime.tv_sec) * 1000000) + end_usage.ru_utime.tv_usec - start_usage.ru_utime.tv_usec;
+		sys_cpu = ((end_usage.ru_stime.tv_sec - start_usage.ru_stime.tv_sec) * 1000000) + end_usage.ru_stime.tv_usec - start_usage.ru_stime.tv_usec;
+	}
+
 	//check_time
 	end_time_ms = get_millisec();
 	double peak_mem_usage = zend_memory_peak_usage(1);
 
 	char *msg = NULL;
-	msg = snprintf_heap("%ld, %ld, %ld, %s%s, %s, %s, %.0f, %ld, %ld"
+	msg = snprintf_heap("%ld, %ld, %ld, %s%s, %s, %s, %.0f, %.0f, %ld, %ld"
 		,start_time_ms //millisecond
 		,end_time_ms //millisecond
 		,end_time_ms - start_time_ms //millisecond
@@ -154,8 +167,9 @@ PHP_RSHUTDOWN_FUNCTION(apm)
 		,ip
 		,method
 		,peak_mem_usage //byte
-		,usr_cpu //micro second
-		,sys_cpu //micro second
+		,end_mem - start_mem //byte
+		, ((rusage_fail_flag == 0) ? usr_cpu : 0) //micro second
+		, ((rusage_fail_flag == 0) ? sys_cpu : 0) //micro second
 	);
 
 //	char *test = NULL;
